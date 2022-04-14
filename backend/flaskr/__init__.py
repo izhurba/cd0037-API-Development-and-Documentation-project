@@ -1,6 +1,8 @@
+from cgi import print_environ_usage
 from http.client import CannotSendRequest
 import os
 from sre_parse import CATEGORIES
+from unicodedata import category
 from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -170,6 +172,29 @@ def create_app(test_config=None):
     Try using the word "title" to start.
     """
 
+    @app.route('/questions/search', methods=['POST'])
+    def search_questions():
+        selection = Question.query.order_by(Question.id).all()
+        searchTerm = request.get_json().get('searchTerm')
+        if searchTerm == '':
+            abort(400)
+        
+        try:
+            results = Question.query.filter(Question.question.ilike(f'%{searchTerm}%')).all()
+            if len(results) == 0:
+                abort(404)
+            pagedQ = paginate_questions(request, results)
+
+            return jsonify({
+                'success': True,
+                'questions': pagedQ,
+                'total_questions': len(selection)
+            }), 200
+        except Exception as e:
+            print(e)
+            abort(404)
+
+
     """
     @TODO:
     Create a GET endpoint to get questions based on category.
@@ -178,6 +203,22 @@ def create_app(test_config=None):
     categories in the left column will cause only questions of that
     category to be shown.
     """
+
+    @app.route('/categories/<int:id>/questions')
+    def get_questions_by_category(id):
+        category = Category.query.filter_by(id=id).one_or_none()
+        if category:
+            questions = Question.query.filter_by(category=id).all()
+            pagedQ = paginate_questions(request, questions)
+
+            return jsonify({
+                'success': True,
+                'questions': pagedQ,
+                'total_questions': len(questions),
+                'current_category': category.type
+            }), 200
+        else:
+            abort(404)
 
     """
     @TODO:
@@ -190,6 +231,36 @@ def create_app(test_config=None):
     one question at a time is displayed, the user is allowed to answer
     and shown whether they were correct or not.
     """
+
+    @app.route('/quizzes', methods=['POST'])
+    def play_quiz():
+        quizCategory = request.get_json().get('quiz_category')
+        prevQuestion = request.get_json().get('previous_questions')
+
+        try:
+            if quizCategory['id'] == 0:
+                questions = Question.query.all()
+            else:
+                questions = Question.query.filter_by(category = quizCategory['id']).all()
+            
+            #nextQuestion = questions[random.randint(0, len(questions)-1)]
+
+            while nextQuestion.id not in prevQuestion:
+                nextQuestion = questions[random.randint(0, len(questions)-1)]
+                return jsonify({
+                    'success':True,
+                    'question':{
+                        'answer': nextQuestion.answer,
+                        'category': nextQuestion.category,
+                        'difficulty': nextQuestion.difficulty,
+                        'id': nextQuestion.id,
+                        'question': nextQuestion.question
+                    },
+                    'previousQuestion': prevQuestion
+                }), 200
+        except Exception as e:
+            print(e)
+            abort(404)
 
     """
     @TODO:
