@@ -64,8 +64,7 @@ def create_app(test_config=None):
                 'success': True,
                 'categories': categories
             }), 200
-        except Exception as e:
-            print(e)
+        except:
             abort(422)
 
 
@@ -102,8 +101,7 @@ def create_app(test_config=None):
                 'deleted': id,
                 'message': "Question Deleted"
             }), 200
-        except Exception as e:
-            print(e)
+        except:
             return jsonify({
                 'success': False,
                 'message': 'Failed to Delete Question'
@@ -130,10 +128,8 @@ def create_app(test_config=None):
                 'questions': paginate_questions(request, selection),
                 'total_questions': len(selection)
             }), 200
-        except Exception as e:
-            print(e)
+        except:
             abort(400)
-
 
     #POST endpoint to get questions based on a search term.
 
@@ -156,8 +152,7 @@ def create_app(test_config=None):
                 'questions': pagedQ,
                 'total_questions': len(selection)
             }), 200
-        except Exception as e:
-            print(e)
+        except:
             abort(404)
 
 
