@@ -3,7 +3,6 @@ from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
-from sqlalchemy import func, and_
 
 from itsdangerous import json
 
@@ -105,7 +104,7 @@ def create_app(test_config=None):
             return jsonify({
                 'success': False,
                 'message': 'Failed to Delete Question'
-            }), 500
+            }), 404
 
     # Endpoint to POST a new question or to get questions based on a search term.
 
@@ -123,8 +122,7 @@ def create_app(test_config=None):
                     'success': True,
                     'questions': pagedQ
                 }), 200
-            except Exception as e:
-                print(e)
+            except:
                 abort(404)
         else:
             try:
