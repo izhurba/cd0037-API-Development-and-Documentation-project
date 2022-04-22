@@ -1,12 +1,9 @@
-from cgi import print_environ_usage
-from http.client import CannotSendRequest
 import os
-from sre_parse import CATEGORIES
-from unicodedata import category
 from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
+from sqlalchemy import func, and_
 
 from itsdangerous import json
 
@@ -14,7 +11,9 @@ from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
 
-#Used to display questions at a maximum of 10 per page
+# Used to display questions at a maximum of 10 per page
+
+
 def paginate_questions(request, selection):
     try:
         page = request.args.get('page', 1, type=int)
@@ -27,7 +26,9 @@ def paginate_questions(request, selection):
         print(e)
         abort(400)
 
-#Method for creating the category dict used by multiple methods
+# Method for creating the category dict used by multiple methods
+
+
 def get_categoryList():
     categories = {}
     categoryList = Category.query.order_by(Category.id).all()
@@ -37,7 +38,9 @@ def get_categoryList():
 
     return categories
 
-#App creation and configuration
+# App creation and configuration
+
+
 def create_app(test_config=None):
     app = Flask(__name__)
     setup_db(app)
@@ -53,8 +56,7 @@ def create_app(test_config=None):
                              'GET,PATCH,POST,DELETE,OPTIONS')
         return response
 
-
-    #Endpoint to handle GET requests
+    # Endpoint to handle GET requests
 
     @app.route('/categories')
     def get_category():
@@ -67,8 +69,7 @@ def create_app(test_config=None):
         except:
             abort(422)
 
-
-    #Endpoint to handle GET requests for questions
+    # Endpoint to handle GET requests for questions
 
     @app.route('/questions')
     def get_questions():
@@ -88,8 +89,7 @@ def create_app(test_config=None):
             'questions': currentQuestions
         }), 200
 
-
-    #Endpoint to DELETE a question using a question ID
+    # Endpoint to DELETE a question using a question ID
 
     @app.route('/questions/<int:id>', methods=['DELETE'])
     def delete_question(id):
@@ -107,56 +107,46 @@ def create_app(test_config=None):
                 'message': 'Failed to Delete Question'
             }), 500
 
-
-    #Endpoint to POST a new question
+    # Endpoint to POST a new question or to get questions based on a search term.
 
     @app.route('/questions', methods=["POST"])
     def create_question():
-        try:
-            new_question = Question(
-                question=request.get_json().get('question'),
-                answer=request.get_json().get('answer'),
-                category=request.get_json().get('category'),
-                difficulty=request.get_json().get('difficulty')
-            )
-            new_question.insert()
-            selection = Question.query.order_by(Question.id).all()
-
-            return jsonify({
-                'success': True,
-                'created': new_question.id,
-                'questions': paginate_questions(request, selection),
-                'total_questions': len(selection)
-            }), 200
-        except:
-            abort(400)
-
-    #POST endpoint to get questions based on a search term.
-
-    @app.route('/questions/search', methods=['POST'])
-    def search_questions():
-        selection = Question.query.order_by(Question.id).all()
         searchTerm = request.get_json().get('searchTerm')
-        if searchTerm == '':
-            abort(400)
-
-        try:
-            results = Question.query.filter(
-                Question.question.ilike(f'%{searchTerm}%')).all()
-            if len(results) == 0:
+        if searchTerm:
+            try:
+                results = Question.query.filter(
+                    Question.question.ilike(f'%{searchTerm}%')).all()
+                if len(results) == 0:
+                    abort(404)
+                pagedQ = paginate_questions(request, results)
+                return jsonify({
+                    'success': True,
+                    'questions': pagedQ
+                }), 200
+            except Exception as e:
+                print(e)
                 abort(404)
-            pagedQ = paginate_questions(request, results)
+        else:
+            try:
+                new_question = Question(
+                    question=request.get_json().get('question'),
+                    answer=request.get_json().get('answer'),
+                    category=request.get_json().get('category'),
+                    difficulty=request.get_json().get('difficulty')
+                )
+                new_question.insert()
+                selection = Question.query.order_by(Question.id).all()
 
-            return jsonify({
-                'success': True,
-                'questions': pagedQ,
-                'total_questions': len(selection)
-            }), 200
-        except:
-            abort(404)
+                return jsonify({
+                    'success': True,
+                    'created': new_question.id,
+                    'questions': paginate_questions(request, selection),
+                    'total_questions': len(selection)
+                }), 200
+            except:
+                abort(400)
 
-
-    #GET endpoint to get questions based on category.
+    # GET endpoint to get questions based on category.
 
     @app.route('/categories/<int:id>/questions')
     def get_questions_by_category(id):
@@ -174,16 +164,12 @@ def create_app(test_config=None):
         else:
             abort(404)
 
-
-    #POST endpoint to get questions to play the quiz.
+    # POST endpoint to get questions to play the quiz.
 
     @app.route('/quizzes', methods=['POST'])
     def play_quiz():
         quizCategory = request.get_json().get('quiz_category')
         prevQuestion = request.get_json().get('previous_questions')
-
-        if (not quizCategory or not prevQuestion):
-            abort(400)
 
         if (quizCategory['id'] == 0):
             questions = Question.query.all()
@@ -193,17 +179,15 @@ def create_app(test_config=None):
 
         nextQuestion = questions[random.randint(0, len(questions)-1)]
 
-        while nextQuestion.id not in prevQuestion:
-                nextQuestion = questions[random.randint(0, len(questions)-1)]
-        
+        while nextQuestion.id in prevQuestion:
+            nextQuestion = questions[random.randint(0, len(questions)-1)]
+
         return jsonify({
             'success': True,
-            'question': nextQuestion.format(),
+            'question': nextQuestion.format()
         }), 200
 
-
-
-    #Error handlers for all expected errors
+    # Error handlers for all expected errors
 
     @app.errorhandler(400)
     def bad_request_error(error):
