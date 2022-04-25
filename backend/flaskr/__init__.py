@@ -169,21 +169,24 @@ def create_app(test_config=None):
         quizCategory = request.get_json().get('quiz_category')
         prevQuestion = request.get_json().get('previous_questions')
 
-        if (quizCategory['id'] == 0):
-            questions = Question.query.all()
-        else:
-            questions = Question.query.filter_by(
-                category=quizCategory['id']).all()
+        try:
+            if (quizCategory['id'] == 0):
+                questions = Question.query.all()
+            else:
+                questions = Question.query.filter_by(
+                    category=quizCategory['id']).all()
 
-        nextQuestion = questions[random.randint(0, len(questions)-1)]
-
-        while nextQuestion.id in prevQuestion:
             nextQuestion = questions[random.randint(0, len(questions)-1)]
 
-        return jsonify({
-            'success': True,
-            'question': nextQuestion.format()
-        }), 200
+            while nextQuestion.id in prevQuestion:
+                nextQuestion = questions[random.randint(0, len(questions)-1)]
+
+            return jsonify({
+                'success': True,
+                'question': nextQuestion.format()
+            }), 200
+        except:
+            abort(400)
 
     # Error handlers for all expected errors
 

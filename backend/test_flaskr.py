@@ -111,20 +111,52 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
 
     def test_delete_question(self):
-        resp = self.client().delete('/questions/19')
+        newestQ = Question.query.all()[-1]  #Used to find the newest created question (to avoid errors)
+        resp = self.client().delete('/questions/' + str(newestQ.id))
         data = json.loads(resp.data)
 
         self.assertEqual(data['success'], True)
-        self.assertEqual(data['deleted'], 19)
+        self.assertEqual(data['deleted'], newestQ.id)
         self.assertEqual(data['message'], "Question Deleted")
         self.assertEqual(resp.status_code, 200)
 
-    def test_delete_question(self):
+    def test_delete_question_404(self):
         resp = self.client().delete('/questions/200')
         data = json.loads(resp.data)
 
         self.assertEqual(data['success'], False)
         self.assertEqual(resp.status_code, 404)
+
+    def test_play_quiz(self):
+        resp = self.client().post('quizzes', 
+                            json={
+                                'previous_questions':[],
+                                'quiz_category': {'id': 0, 'type': 'All'}
+                            })
+        
+        self.assertEqual(resp.status_code, 200)
+
+    def test_play_quiz_400(self):
+        resp = self.client().post('quizzes', 
+                            json={
+                                'previous_questions':[],
+                                'quiz_category': {'id': 7, 'type': 'Blahblah'}
+                            }) 
+    
+        self.assertEqual(resp.status_code, 400)
+
+    def test_play_quiz_with_options(self):
+        resp = self.client().post('quizzes', 
+                            json={
+                                'previous_questions':[13, 14],
+                                'quiz_category': {'id': 3, 'type': 'Geography'}
+                            })
+    
+        data = json.loads(resp.data)
+
+        self.assertEqual(data['question']['category'], 3)
+        self.assertEqual(data['question']['id'], 15)
+        self.assertEqual(resp.status_code, 200)
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
