@@ -3,6 +3,7 @@ from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
+from werkzeug.exceptions import HTTPException
 
 from itsdangerous import json
 
@@ -21,7 +22,7 @@ def paginate_questions(request, selection):
         questions = [question.format() for question in selection]
         current_questions = questions[start:end]
         return current_questions
-    except Exception as e:
+    except HTTPException as e:
         print(e)
         abort(400)
 
@@ -65,7 +66,8 @@ def create_app(test_config=None):
                 'success': True,
                 'categories': categories
             }), 200
-        except:
+        except HTTPException as e:
+            print(e)
             abort(422)
 
     # Endpoint to handle GET requests for questions
@@ -100,13 +102,15 @@ def create_app(test_config=None):
                 'deleted': id,
                 'message': "Question Deleted"
             }), 200
-        except:
+        except HTTPException as e:
+            print(e)
             return jsonify({
                 'success': False,
-                'message': 'Failed to Delete Question'
+                'deleted': id,
+                'message': 'Failed to Delete Question with ID' + str(id)
             }), 404
 
-    # Endpoint to POST a new question or to get questions based on a search term.
+    # POST a new question or to get questions based on a search term.
 
     @app.route('/questions', methods=["POST"])
     def create_question():
@@ -122,7 +126,8 @@ def create_app(test_config=None):
                     'success': True,
                     'questions': pagedQ
                 }), 200
-            except:
+            except HTTPException as e:
+                print(e)
                 abort(404)
         else:
             try:
@@ -141,7 +146,8 @@ def create_app(test_config=None):
                     'questions': paginate_questions(request, selection),
                     'total_questions': len(selection)
                 }), 200
-            except:
+            except HTTPException as e:
+                print(e)
                 abort(400)
 
     # GET endpoint to get questions based on category.
@@ -166,26 +172,33 @@ def create_app(test_config=None):
 
     @app.route('/quizzes', methods=['POST'])
     def play_quiz():
-        quizCategory = request.get_json().get('quiz_category')
+        quizCategory = request.get_json().get('quiz_category').get('id')
         prevQuestion = request.get_json().get('previous_questions')
 
         try:
-            if (quizCategory['id'] == 0):
+            if (quizCategory == 0):
                 questions = Question.query.all()
             else:
                 questions = Question.query.filter_by(
-                    category=quizCategory['id']).all()
+                    category=quizCategory).all()
 
             nextQuestion = questions[random.randint(0, len(questions)-1)]
+
 
             while nextQuestion.id in prevQuestion:
                 nextQuestion = questions[random.randint(0, len(questions)-1)]
 
-            return jsonify({
-                'success': True,
-                'question': nextQuestion.format()
-            }), 200
-        except:
+            if len(prevQuestion) == len(questions):
+                return jsonify({
+                    'success': True,
+                    'question': nextQuestion.format()
+                }), 200
+            else:
+                return jsonify({
+                    'question': False,
+                }), 200
+        except HTTPException as e:
+            print(e)
             abort(400)
 
     # Error handlers for all expected errors
