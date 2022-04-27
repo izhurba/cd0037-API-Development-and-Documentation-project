@@ -134,14 +134,15 @@ def create_app(test_config=None):
                 newCategory = request.get_json().get('category'),
                 newDifficulty = request.get_json().get('difficulty')
 
-                if ((newQuestion == '') or (newAnswer == '') or (newCategory == '') or (newDifficulty == '')):
-                        abort(400) 
+                if ((newQuestion == '') or (newAnswer == '') or
+                        (newCategory == '') or (newDifficulty == '')):
+                    abort(400)
 
                 new_question = Question(
-                    question = newQuestion,
-                    answer = newAnswer,
-                    category = newCategory,
-                    difficulty= newDifficulty
+                    question=newQuestion,
+                    answer=newAnswer,
+                    category=newCategory,
+                    difficulty=newDifficulty
                 )
                 new_question.insert()
                 selection = Question.query.order_by(Question.id).all()
@@ -196,9 +197,8 @@ def create_app(test_config=None):
                 return jsonify({
                     'success': True,
                 }), 200
-
             nextQuestion = possQList[random.randint(0, len(possQList)-1)]
-            
+
             return jsonify({
                 'success': True,
                 'question': nextQuestion.format()
