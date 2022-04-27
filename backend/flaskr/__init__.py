@@ -102,8 +102,7 @@ def create_app(test_config=None):
                 'deleted': id,
                 'message': "Question Deleted"
             }), 200
-        except HTTPException as e:
-            print(e)
+        except Exception as e:
             return jsonify({
                 'success': False,
                 'deleted': id,
@@ -127,15 +126,22 @@ def create_app(test_config=None):
                     'questions': pagedQ
                 }), 200
             except HTTPException as e:
-                print(e)
                 abort(404)
         else:
             try:
+                newQuestion = request.get_json().get('question'),
+                newAnswer = request.get_json().get('answer'),
+                newCategory = request.get_json().get('category'),
+                newDifficulty = request.get_json().get('difficulty')
+
+                if ((newQuestion == '') or (newAnswer == '') or (newCategory == '') or (newDifficulty == '')):
+                        abort(400) 
+
                 new_question = Question(
-                    question=request.get_json().get('question'),
-                    answer=request.get_json().get('answer'),
-                    category=request.get_json().get('category'),
-                    difficulty=request.get_json().get('difficulty')
+                    question = newQuestion,
+                    answer = newAnswer,
+                    category = newCategory,
+                    difficulty= newDifficulty
                 )
                 new_question.insert()
                 selection = Question.query.order_by(Question.id).all()
@@ -146,8 +152,7 @@ def create_app(test_config=None):
                     'questions': paginate_questions(request, selection),
                     'total_questions': len(selection)
                 }), 200
-            except HTTPException as e:
-                print(e)
+            except Exception as e:
                 abort(400)
 
     # GET endpoint to get questions based on category.
@@ -172,33 +177,33 @@ def create_app(test_config=None):
 
     @app.route('/quizzes', methods=['POST'])
     def play_quiz():
-        quizCategory = request.get_json().get('quiz_category').get('id')
+        quizCategory = request.get_json().get('quiz_category')
         prevQuestion = request.get_json().get('previous_questions')
+        possQList = []
 
         try:
             if (quizCategory == 0):
                 questions = Question.query.all()
             else:
                 questions = Question.query.filter_by(
-                    category=quizCategory).all()
+                    category=quizCategory['id']).all()
 
-            nextQuestion = questions[random.randint(0, len(questions)-1)]
+            for qs in questions:
+                if qs.id not in prevQuestion:
+                    possQList.append(qs)
 
-
-            while nextQuestion.id in prevQuestion:
-                nextQuestion = questions[random.randint(0, len(questions)-1)]
-
-            if len(prevQuestion) == len(questions):
+            if len(possQList) == 0:
                 return jsonify({
                     'success': True,
-                    'question': nextQuestion.format()
                 }), 200
-            else:
-                return jsonify({
-                    'question': False,
-                }), 200
-        except HTTPException as e:
-            print(e)
+
+            nextQuestion = possQList[random.randint(0, len(possQList)-1)]
+            
+            return jsonify({
+                'success': True,
+                'question': nextQuestion.format()
+            }), 200
+        except Exception as e:
             abort(400)
 
     # Error handlers for all expected errors

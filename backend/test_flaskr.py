@@ -104,8 +104,8 @@ class TriviaTestCase(unittest.TestCase):
         resp = self.client().post('/questions',
                             json = {
                                 'question' : '',
-                                'answer' : 'A test answer',
-                                'category': 0,
+                                'answer' : '',
+                                'category': 100,
                                 'difficulty' : 1
                             })
         self.assertEqual(resp.status_code, 400)
@@ -140,7 +140,7 @@ class TriviaTestCase(unittest.TestCase):
         resp = self.client().post('quizzes', 
                             json={
                                 'previous_questions':[],
-                                'quiz_category': {'id': 7, 'type': 'Blahblah'}
+                                'quiz_category': {}
                             }) 
     
         self.assertEqual(resp.status_code, 400)
